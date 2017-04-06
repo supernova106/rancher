@@ -1,0 +1,113 @@
+variable "datacenter" {default = "aws"}
+
+variable "amis" {
+  default = {
+    us-east-1 = "ami-5ac2cd4d"
+  }
+}
+
+variable "availability_zones"  {
+  default = "a,b,c"
+}
+
+variable "long_name" {default = "pubsub-infra"}
+variable "region" {default = "us-east-1"}
+variable "short_name" {default = "pubsub"}
+variable "ssh_key" {default = "~/.ssh/id_rsa.pub"}
+variable "ssh_username"  {default = "ubuntu"}
+
+variable "pubsub_count" {default = "1"}
+variable "config_count" {default = "1"}
+variable "mongodb_count" {default = "1"}
+
+variable "pubsub_type" {default = "m3.medium"}
+variable "config_type" {default = "m3.medium"}
+variable "mongodb_type" {default = "m3.medium"}
+
+provider "aws" {
+  region = "${var.region}"
+}
+
+module "vpc" {
+  source ="./terraform/aws/vpc"
+  availability_zones = "${var.availability_zones}"
+  short_name = "${var.short_name}"
+  long_name = "${var.long_name}"
+  region = "${var.region}"
+}
+
+module "ssh-key" {
+  source ="./terraform/aws/ssh"
+  short_name = "${var.short_name}"
+}
+
+module "security-groups" {
+  source = "./terraform/aws/security_groups"
+  short_name = "${var.short_name}"
+  vpc_id = "${module.vpc.vpc_id}"
+}
+
+module "iam-profiles" {
+  source = "./terraform/aws/iam"
+  short_name = "${var.short_name}"
+}
+
+module "pubsub-nodes" {
+  source = "./terraform/aws/instance"
+  count = "${var.pubsub_count}"
+  datacenter = "${var.datacenter}"
+  role = "pubsub"
+  ec2_type = "${var.pubsub_type}"
+  iam_profile = "${module.iam-profiles.pubsub_iam_instance_profile}"
+  ssh_username = "${var.ssh_username}"
+  source_ami = "${lookup(var.amis, var.region)}"
+  short_name = "${var.short_name}"
+  ssh_key_pair = "${module.ssh-key.ssh_key_name}"
+  availability_zones = "${module.vpc.availability_zones}"
+  security_group_ids = "${module.vpc.default_security_group},${module.security-groups.inner_security_group},${module.security-groups.config_security_group}"
+  vpc_subnet_ids = "${module.vpc.subnet_ids}"
+  # uncomment below it you want to use remote state for vpc variables
+  #availability_zones = "${terraform_remote_state.vpc.output.availability_zones}"
+  #security_group_ids = "${terraform_remote_state.vpc.output.default_security_group},${module.security-groups.ui_security_group},${module.security-groups.control_security_group}"
+  #vpc_subnet_ids = "${terraform_remote_state.vpc.output.subnet_ids}"
+}
+
+module "config-nodes" {
+  source = "./terraform/aws/instance"
+  count = "${var.config_count}"
+  datacenter = "${var.datacenter}"
+  role = "config"
+  ec2_type = "${var.config_type}"
+  iam_profile = "${module.iam-profiles.pubsub_iam_instance_profile}"
+  ssh_username = "${var.ssh_username}"
+  source_ami = "${lookup(var.amis, var.region)}"
+  short_name = "${var.short_name}"
+  ssh_key_pair = "${module.ssh-key.ssh_key_name}"
+  availability_zones = "${module.vpc.availability_zones}"
+  security_group_ids = "${module.vpc.default_security_group},${module.security-groups.inner_security_group},${module.security-groups.config_security_group}"
+  vpc_subnet_ids = "${module.vpc.subnet_ids}"
+  # uncomment below it you want to use remote state for vpc variables
+  #availability_zones = "${terraform_remote_state.vpc.output.availability_zones}"
+  #security_group_ids = "${terraform_remote_state.vpc.output.default_security_group},${module.security-groups.ui_security_group},${module.security-groups.control_security_group}"
+  #vpc_subnet_ids = "${terraform_remote_state.vpc.output.subnet_ids}"
+}
+
+module "mongodb-nodes" {
+  source = "./terraform/aws/instance"
+  count = "${var.mongodb_count}"
+  datacenter = "${var.datacenter}"
+  role = "mongodb"
+  ec2_type = "${var.mongodb_type}"
+  iam_profile = "${module.iam-profiles.pubsub_iam_instance_profile}"
+  ssh_username = "${var.ssh_username}"
+  source_ami = "${lookup(var.amis, var.region)}"
+  short_name = "${var.short_name}"
+  ssh_key_pair = "${module.ssh-key.ssh_key_name}"
+  availability_zones = "${module.vpc.availability_zones}"
+  security_group_ids = "${module.vpc.default_security_group},${module.security-groups.inner_security_group},${module.security-groups.config_security_group}"
+  vpc_subnet_ids = "${module.vpc.subnet_ids}"
+  # uncomment below it you want to use remote state for vpc variables
+  #availability_zones = "${terraform_remote_state.vpc.output.availability_zones}"
+  #security_group_ids = "${terraform_remote_state.vpc.output.default_security_group},${module.security-groups.ui_security_group},${module.security-groups.control_security_group}"
+  #vpc_subnet_ids = "${terraform_remote_state.vpc.output.subnet_ids}"
+}

@@ -1,0 +1,36 @@
+---
+# tasks file for server
+- name: install system packages
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+    cache_valid_time: 3600
+  with_items:
+  - build-essential
+  - python
+  - python-pip
+
+- name: instal pip packages
+  become: yes
+  pip:
+    name: "{{ item }}"
+  with_items:
+    - docker-py
+
+- name: Entropy maker HAVEGED
+  docker_container:
+    name: havegedocker
+    image: joshuacox/havegedocker:latest
+    privileged: yes
+    state: started
+
+- name: RancherOS rancher/server
+  docker_container:
+    name: rancherserver
+    image: rancher/server
+    state: started
+    restart_policy: always
+    ports:
+    - "8080:8080"

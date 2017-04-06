@@ -1,0 +1,16 @@
+---
+- hosts: "role=server"
+  become: yes
+  roles:
+    - server
+
+- hosts: "role=agent"
+  vars:
+     url_contents: "{{ lookup('file', 'url') }}"
+     ip_contents: "{{ lookup('file', 'ip') }}"
+     labels_contents: "{{ lookup('file', 'labels') }}"
+     datadir_contents: "{{ lookup('file', 'datadir') }}"
+  become: yes
+  roles:
+    - agent
+

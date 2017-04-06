@@ -1,0 +1,6 @@
+---
+# defaults file for agent
+url_contents: ""
+ip_contents: ""
+labels_contents: ""
+datadir_contents: "/data/rancher"
